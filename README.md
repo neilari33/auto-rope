@@ -1,79 +1,34 @@
+function StartAutoRope()
+	if TrollSettings.AutoUnrope.Connection then
+		TrollSettings.AutoUnrope.Connection:Disconnect()
+	end
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local localPlayer = Players.LocalPlayer
+	TrollSettings.AutoUnrope.Connection = RunService.Heartbeat:Connect(function()
+		-- Sempre ativo para rodar a lógica sem precisar de ativação manual constante
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				local tempStats = plr:FindFirstChild("TempPlayerStatsModule")
+				if tempStats then
+					local ragdoll = tempStats:FindFirstChild("Ragdoll")
+					if ragdoll and ragdoll.Value then
+						local myChar = player.Character
+						if myChar and myChar:FindFirstChild("BeastPowers") then
+							local myHrp = myChar:FindFirstChild("HumanoidRootPart")
+							local targetHrp = plr.Character:FindFirstChild("HumanoidRootPart")
 
-local MAX_DISTANCE = 5
-
-local function GetBeast()
-    for _, v in ipairs(Players:GetPlayers()) do
-        local char = v.Character
-        if char and char:FindFirstChild("BeastPowers") then
-            return char
-        end
-    end
-    return nil
+							if myHrp and targetHrp then
+								local distance = (myHrp.Position - targetHrp.Position).Magnitude
+								if distance <= RopeHelperSettings.MaxDistance then
+									AutoRopePlayer(plr)
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end)
 end
 
-local function AutoRopePlayer(targetPlayer)
-    local beast = GetBeast()
-    if not beast then return end
-
-    local hammer = beast:FindFirstChild("Hammer")
-    if not hammer then return end
-
-    local hammerEvent = hammer:FindFirstChild("HammerEvent")
-    local targetChar = targetPlayer.Character
-    if not targetChar or not hammerEvent then return end
-
-    local targetPart = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("HumanoidRootPart")
-    local hrp = targetChar:FindFirstChild("HumanoidRootPart")
-
-    if targetPart and hrp then
-        local args = {
-            "HammerTieUp",
-            targetPart,
-            hrp.Position
-        }
-        hammerEvent:FireServer(unpack(args))
-    end
-end
-
-local function setupRagdollMonitoring(plr)
-    if plr == localPlayer then return end
-
-    local function monitor(char)
-        local tempStats = plr:WaitForChild("TempPlayerStatsModule", 5)
-        if not tempStats then return end
-
-        local ragdoll = tempStats:WaitForChild("Ragdoll", 5)
-        if not ragdoll then return end
-
-        ragdoll.Changed:Connect(function(isRagdolled)
-            if isRagdolled then
-                local myChar = localPlayer.Character
-                if not myChar or not myChar:FindFirstChild("BeastPowers") then return end
-
-                local myHrp = myChar:FindFirstChild("HumanoidRootPart")
-                local targetHrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-
-                if myHrp and targetHrp then
-                    local distance = (myHrp.Position - targetHrp.Position).Magnitude
-                    if distance <= MAX_DISTANCE then
-                        AutoRopePlayer(plr)
-                    end
-                end
-            end
-        end)
-    end
-
-    if plr.Character then
-        monitor(plr.Character)
-    end
-    plr.CharacterAdded:Connect(monitor)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    setupRagdollMonitoring(p)
-end
-Players.PlayerAdded:Connect(setupRagdollMonitoring)
+-- Inicializa o Auto Rope permanentemente ativo
+StartAutoRope()
